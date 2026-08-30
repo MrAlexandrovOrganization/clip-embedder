@@ -20,6 +20,10 @@ proto:
 run: proto
 	uv run python src/server.py
 
+.PHONY: build
+build:
+	$(DOCKER_COMPOSE) build $(SERVICE)
+
 .PHONY: up
 up:
 	$(DOCKER_COMPOSE) up -d --build $(SERVICE)
