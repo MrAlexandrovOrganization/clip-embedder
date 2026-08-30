@@ -19,14 +19,13 @@ import logging
 import os
 from concurrent import futures
 
+import embed_pb2
+import embed_pb2_grpc
 import grpc
 import open_clip
 import torch
 from grpc_health.v1 import health, health_pb2, health_pb2_grpc
 from PIL import Image
-
-import embed_pb2
-import embed_pb2_grpc
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("clip-embedder")
