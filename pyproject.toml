@@ -6,8 +6,10 @@ requires-python = ">=3.12"
 dependencies = [
     "grpcio>=1.60",
     "grpcio-tools>=1.60",
+    "grpcio-health-checking",
     "open_clip_torch",
     "torch",
+    "torchvision",
     "pillow",
     "numpy",
 ]
@@ -26,6 +28,7 @@ package = false
 # [tool.uv.sources]/[[tool.uv.index]] blocks below (then torch pulls CUDA).
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu" }]
+torchvision = [{ index = "pytorch-cpu" }]
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

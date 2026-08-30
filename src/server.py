@@ -19,13 +19,14 @@ import logging
 import os
 from concurrent import futures
 
-import clip  # open_clip
-import embed_pb2
-import embed_pb2_grpc
 import grpc
+import open_clip
 import torch
 from grpc_health.v1 import health, health_pb2, health_pb2_grpc
 from PIL import Image
+
+import embed_pb2
+import embed_pb2_grpc
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("clip-embedder")
@@ -77,9 +78,9 @@ class EmbedderServicer(embed_pb2_grpc.EmbedderServiceServicer):
 
 def main():
     logger.info("loading open_clip %s/%s on %s", MODEL_NAME, PRETRAIN, DEVICE)
-    model, _, preprocess = clip.create_model_and_transforms(MODEL_NAME, pretrained=PRETRAIN)
+    model, _, preprocess = open_clip.create_model_and_transforms(MODEL_NAME, pretrained=PRETRAIN)
     model = model.to(DEVICE).eval()
-    tokenizer = clip.get_tokenizer(MODEL_NAME)
+    tokenizer = open_clip.get_tokenizer(MODEL_NAME)
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
     embed_pb2_grpc.add_EmbedderServiceServicer_to_server(
