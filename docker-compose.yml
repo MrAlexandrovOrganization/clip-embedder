@@ -24,3 +24,4 @@ services:
 # Shared with the stash backend so it can reach clip-embedder:50051.
 networks:
   clip-net:
+    name: clip-net

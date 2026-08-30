@@ -6,7 +6,11 @@ option go_package = "stash/gen/embed";
 // EmbedderService produces vector embeddings for images and text using a single
 // shared multimodal space (CLIP/open_clip). The stash backend calls this
 // service over gRPC; the reference implementation lives in this repository.
-// Generated stubs: run ./generate_proto.sh.
+//
+// Canonical schema for the shared contract. The stash backend mirrors it at
+// proto/embed/embed.proto — keep the two in sync (only comments may differ).
+//
+// Generate Python stubs with:    make proto
 service EmbedderService {
   rpc EmbedImage(EmbedImageRequest) returns (EmbedResponse);
   rpc EmbedText(EmbedTextRequest) returns (EmbedResponse);
