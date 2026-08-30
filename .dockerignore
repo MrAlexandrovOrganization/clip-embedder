@@ -1,0 +1,17 @@
+.git
+.gitignore
+.github
+.venv
+.ruff_cache
+__pycache__
+*.pyc
+.pytest_cache
+.python-version
+.env
+.env.*
+docker-compose.yml
+docker-compose.base.yml
+Makefile
+src/embed_pb2.py
+src/embed_pb2_grpc.py
+src/embed_pb2.pyi

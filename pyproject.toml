@@ -1,0 +1,42 @@
+[project]
+name = "clip-embedder"
+version = "0.1.0"
+description = "gRPC microservice that embeds images and text with open_clip (CLIP)."
+requires-python = ">=3.12"
+dependencies = [
+    "grpcio>=1.60",
+    "grpcio-tools>=1.60",
+    "open_clip_torch",
+    "torch",
+    "pillow",
+    "numpy",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+]
+
+# Application, not a library: don't build/install ourselves into the venv.
+[tool.uv]
+package = false
+
+# Build a CPU-only torch wheel to keep the image small. For GPU, drop the
+# [tool.uv.sources]/[[tool.uv.index]] blocks below (then torch pulls CUDA).
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Generated gRPC stubs live in src/ and must not be linted.
+extend-exclude = ["src/embed_pb2.py", "src/embed_pb2_grpc.py", "src/embed_pb2.pyi"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
