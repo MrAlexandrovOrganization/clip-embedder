@@ -55,7 +55,7 @@ lint:
 
 .PHONY: test
 test: proto
-	uv run --env PYTHONPATH=src python -c "import embed_pb2, embed_pb2_grpc; print('proto stubs ok')"
+	uv run python -c "import sys; sys.path.insert(0, 'src'); import embed_pb2, embed_pb2_grpc; print('proto stubs ok')"
 
 .PHONY: clean
 clean:

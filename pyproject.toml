@@ -12,9 +12,9 @@ dependencies = [
     "numpy",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "ruff",
+    "ruff==0.16.5",
     "pytest",
 ]
 

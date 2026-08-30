@@ -40,7 +40,7 @@ wheels = [
 [[package]]
 name = "clip-embedder"
 version = "0.1.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "grpcio" },
     { name = "grpcio-tools" },
@@ -51,7 +51,7 @@ dependencies = [
     { name = "torch", version = "2.13.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "pytest" },
     { name = "ruff" },
@@ -64,11 +64,14 @@ requires-dist = [
     { name = "numpy" },
     { name = "open-clip-torch" },
     { name = "pillow" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "ruff", marker = "extra == 'dev'" },
     { name = "torch", index = "https://download.pytorch.org/whl/cpu" },
 ]
-provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest" },
+    { name = "ruff", specifier = "==0.16.5" },
+]
 
 [[package]]
 name = "colorama"
