@@ -5,6 +5,16 @@ SERVICE = clip-embedder
 install:
 	uv sync --dev
 
+# Install the pre-commit git hook (requires `make install` first).
+.PHONY: hooks
+hooks:
+	uv run pre-commit install
+
+# Run all pre-commit hooks over the whole tree.
+.PHONY: precommit
+precommit:
+	uv run pre-commit run --all-files
+
 # Regenerate Python gRPC stubs from proto/embed.proto into src/.
 # proto/embed.proto is the canonical source — edit it here, then run make proto.
 .PHONY: proto

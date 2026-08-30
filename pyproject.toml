@@ -18,6 +18,7 @@ dependencies = [
 dev = [
     "ruff==0.16.5",
     "pytest",
+    "pre-commit",
 ]
 
 # Application, not a library: don't build/install ourselves into the venv.
