@@ -12,7 +12,7 @@ services:
       CLIP_PRETRAIN: "${CLIP_PRETRAIN:-laion2b_s34b_b79k}"
       GRPC_PORT: "50051"
     ports:
-      - "50051:50051"
+      - "127.0.0.1:50051:50051"
     networks:
       - clip-net
     deploy:
