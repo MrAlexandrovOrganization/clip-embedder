@@ -30,6 +30,7 @@ services:
     environment:
       <<: *env
       DEVICE: cpu
+      PRECISION: ${CPU_PRECISION:-fp32}
       WORKER_ID: ${CPU_WORKER_ID:-clip-mac-cpu}
     secrets:
       - source: cpu-token
@@ -43,6 +44,7 @@ services:
     environment:
       <<: *env
       DEVICE: cuda
+      PRECISION: ${GPU_PRECISION:-fp16}
       WORKER_ID: ${GPU_WORKER_ID:-clip-wsl-gpu}
     secrets:
       - source: gpu-token

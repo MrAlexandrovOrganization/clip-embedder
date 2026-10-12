@@ -74,3 +74,8 @@ are not used by ordinary checks. make versions shows tool/image pins. Version
 sources are versions.mk, go.mod or pyproject.toml/uv.lock. Standalone worker
 health reflects readiness reports; docker logs includes structured lifecycle,
 attempt outcome and duration without media, descriptions or bearer credentials.
+
+GPU workers default to mixed FP16 weights to fit alongside Whisper on the MX550;
+CPU uses FP32. GPU_PRECISION/CPU_PRECISION select the supported modes in .env.
+Output normalization runs in FP32. The model/checkpoint/512-dimensional space is
+identical; vectors are not guaranteed bitwise identical across precisions.

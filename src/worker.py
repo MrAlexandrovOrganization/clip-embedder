@@ -34,8 +34,13 @@ def main():
     device = os.getenv("DEVICE", "cpu")
     if device not in ("cpu", "cuda") or (device == "cuda" and not torch.cuda.is_available()):
         raise ValueError("configured device unavailable")
+    precision = os.getenv("PRECISION", "fp16" if device == "cuda" else "fp32")
+    if precision not in ("fp32", "fp16") or (device == "cpu" and precision != "fp32"):
+        raise ValueError("invalid inference precision")
     torch.set_num_threads(int(os.getenv("CPU_THREADS", "2")))
-    model, _, preprocess = open_clip.create_model_and_transforms(model_name, pretrained=pretrained)
+    model, _, preprocess = open_clip.create_model_and_transforms(
+        model_name, pretrained=pretrained, device=device, precision=precision
+    )
     model = model.to(device).eval()
     tokenizer = open_clip.get_tokenizer(model_name)
     options = [
@@ -147,12 +152,17 @@ def main():
                         if job.kind == "image":
                             with Image.open(io.BytesIO(job.image)) as source:
                                 image = source.convert("RGB")
-                            tensor = preprocess(image).unsqueeze(0).to(device)
+                            tensor = (
+                                preprocess(image)
+                                .unsqueeze(0)
+                                .to(device=device, dtype=model.visual.conv1.weight.dtype)
+                            )
                             vector = model.encode_image(tensor)
                         elif job.kind == "text":
                             vector = model.encode_text(tokenizer([job.text]).to(device))
                         else:
                             raise ValueError("unsupported task kind")
+                        vector = vector.float()
                         vector = (
                             (vector / vector.norm(dim=-1, keepdim=True)).cpu().flatten().tolist()
                         )
