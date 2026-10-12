@@ -1,0 +1,62 @@
+x-worker: &worker
+  user: ${WORKER_UID:-1000}:${WORKER_GID:-1000}
+  restart: unless-stopped
+  command: [python, src/worker.py]
+  stop_grace_period: 45s
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  volumes: [model-cache:/cache]
+  healthcheck:
+    test: [CMD-SHELL, test -f /tmp/worker-ready]
+    interval: 20s
+    timeout: 5s
+    start_period: 5m
+    retries: 3
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: "3"}
+x-env: &env
+  WORKER_ENDPOINT: ${WORKER_ENDPOINT:?Set TLS coordinator endpoint}
+  WORKER_TRANSPORT: tls
+  WORKER_TOKEN_FILE: /run/secrets/worker-token
+  CLIP_MODEL: ${CLIP_MODEL:-ViT-B/32}
+  CLIP_PRETRAIN: ${CLIP_PRETRAIN:-laion2b_s34b_b79k}
+  CPU_THREADS: ${CPU_THREADS:-2}
+services:
+  worker-cpu:
+    <<: *worker
+    profiles: [cpu]
+    image: ${WORKER_CPU_IMAGE:-ghcr.io/mralexandrovorganization/clip-embedder-worker-cpu:bootstrap}
+    environment:
+      <<: *env
+      DEVICE: cpu
+      WORKER_ID: ${CPU_WORKER_ID:-clip-mac-cpu}
+    secrets:
+      - source: cpu-token
+        target: worker-token
+    mem_limit: ${CPU_MEMORY_LIMIT:-2g}
+    cpus: ${CPU_LIMIT:-2}
+  worker-gpu:
+    <<: *worker
+    profiles: [gpu]
+    image: ${WORKER_GPU_IMAGE:-ghcr.io/mralexandrovorganization/clip-embedder-worker-gpu:bootstrap}
+    environment:
+      <<: *env
+      DEVICE: cuda
+      WORKER_ID: ${GPU_WORKER_ID:-clip-wsl-gpu}
+    secrets:
+      - source: gpu-token
+        target: worker-token
+    mem_limit: ${GPU_MEMORY_LIMIT:-2g}
+    cpus: ${GPU_CPU_LIMIT:-1}
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+secrets:
+  cpu-token:
+    file: ${CPU_WORKER_TOKEN_PATH:-/missing/cpu.token}
+  gpu-token:
+    file: ${GPU_WORKER_TOKEN_PATH:-/missing/gpu.token}
+volumes:
+  model-cache:

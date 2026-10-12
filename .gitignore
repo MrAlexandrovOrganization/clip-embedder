@@ -6,3 +6,7 @@ src/embed_pb2_grpc.py
 src/embed_pb2.pyi
 .ruff_cache/
 .pytest_cache/
+
+.env*
+!.env.*.example
+.worker-release*

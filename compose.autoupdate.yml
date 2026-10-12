@@ -1,0 +1,32 @@
+services:
+  worker-cpu:
+    labels:
+      io.compute.autodeploy: "true"
+      io.compute.worker-role: cpu
+      io.compute.drain-protocol: "1"
+  worker-gpu:
+    labels:
+      io.compute.autodeploy: "true"
+      io.compute.worker-role: gpu
+      io.compute.drain-protocol: "1"
+  worker-updater:
+    build:
+      context: .
+      dockerfile: updater/Dockerfile
+      args:
+        PYTHON_VERSION: ${PYTHON_VERSION:?Run via make}
+    restart: unless-stopped
+    environment:
+      WORKER_PROJECT: ${COMPOSE_PROJECT_NAME:?Set compose project name}
+      WORKER_REGISTRY: ghcr.io/mralexandrovorganization/clip-embedder
+      UPDATER_INTERVAL_S: "300"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - updater-state:/state
+    mem_limit: 96m
+    cpus: "0.1"
+    logging:
+      driver: json-file
+      options: {max-size: 5m, max-file: "3"}
+volumes:
+  updater-state:

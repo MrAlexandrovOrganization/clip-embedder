@@ -28,4 +28,40 @@ message EmbedResponse {
   repeated float vector = 1;
   int32 dim = 2;
   string model = 3;
+  string pretrained = 4;
 }
+
+// Worker-only RPCs. Expose this service through Caddy, never EmbedderService.
+service WorkerService {
+  rpc Report(ReportRequest) returns (WorkerReply);
+  rpc Claim(ClaimRequest) returns (ClaimResponse);
+  rpc Heartbeat(LeaseRequest) returns (WorkerReply);
+  rpc Complete(CompleteRequest) returns (WorkerReply);
+  rpc Fail(FailRequest) returns (WorkerReply);
+}
+message ReportRequest {
+  string worker_id = 1;
+  string instance_id = 2;
+  bool ready = 3;
+  string model = 4;
+  string pretrained = 5;
+}
+message WorkerReply { bool accepted = 1; }
+message ClaimRequest { string worker_id = 1; string instance_id = 2; }
+message LeaseRequest {
+  string worker_id = 1;
+  string instance_id = 2;
+  string job_id = 3;
+  string lease_id = 4;
+}
+message ClaimResponse {
+  string job_id = 1;
+  string lease_id = 2;
+  bytes image = 3;
+  string text = 4;
+  string kind = 5;
+  string model = 6;
+  string pretrained = 7;
+}
+message CompleteRequest { LeaseRequest lease = 1; EmbedResponse result = 2; }
+message FailRequest { LeaseRequest lease = 1; bool permanent = 2; }

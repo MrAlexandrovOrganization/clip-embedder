@@ -1,27 +1,76 @@
+x-build: &build
+  context: .
+  dockerfile: src/Dockerfile
+  args:
+    PYTHON_VERSION: ${PYTHON_VERSION:?Run via make}
+    UV_VERSION: ${UV_VERSION:?Run via make}
 services:
   clip-embedder:
-    build:
-      context: .
-      dockerfile: src/Dockerfile
+    user: ${WORKER_UID:-1000}:${WORKER_GID:-1000}
+    build: *build
     restart: unless-stopped
-    extends:
-      file: docker-compose.base.yml
-      service: base
+    command: [python, src/coordinator.py]
     environment:
-      CLIP_MODEL: "${CLIP_MODEL:-ViT-B/32}"
-      CLIP_PRETRAIN: "${CLIP_PRETRAIN:-laion2b_s34b_b79k}"
-      GRPC_PORT: "50051"
-    ports:
-      - "127.0.0.1:50051:50051"
-    networks:
-      - clip-net
+      CLIP_MODEL: ${CLIP_MODEL:-ViT-B/32}
+      CLIP_PRETRAIN: ${CLIP_PRETRAIN:-laion2b_s34b_b79k}
+      QUEUE_PATH: /data/queue.sqlite3
+      WORKER_CREDENTIALS_FILE: /run/secrets/worker-credentials
+      PREFERRED_WORKER_IDS: ${PREFERRED_WORKER_IDS:-clip-mac-cpu,clip-wsl-cpu,clip-wsl-gpu}
+    secrets: [worker-credentials]
+    volumes: [queue-data:/data]
+    networks: [clip-net, caddy-transcriber-net]
+    stop_grace_period: 30s
+    healthcheck:
+      test: [CMD, python, -c, "import grpc; from grpc_health.v1 import health_pb2,health_pb2_grpc; c=grpc.insecure_channel('localhost:50051'); assert health_pb2_grpc.HealthStub(c).Check(health_pb2.HealthCheckRequest(service='embed.EmbedderService'),timeout=3).status==1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
     deploy:
       resources:
-        limits:
-          memory: 2g
-          cpus: "1.0"
-
-# Shared with the stash backend so it can reach clip-embedder:50051.
+        limits: {memory: 768m, cpus: "0.5"}
+  worker-cpu:
+    user: ${WORKER_UID:-1000}:${WORKER_GID:-1000}
+    build: *build
+    command: [python, src/worker.py]
+    restart: unless-stopped
+    stop_grace_period: 45s
+    environment:
+      WORKER_ID: clip-server-fallback
+      WORKER_ENDPOINT: clip-embedder:50057
+      WORKER_TRANSPORT: internal
+      WORKER_TOKEN_FILE: /run/secrets/worker-token
+      CLIP_MODEL: ${CLIP_MODEL:-ViT-B/32}
+      CLIP_PRETRAIN: ${CLIP_PRETRAIN:-laion2b_s34b_b79k}
+      DEVICE: cpu
+      CPU_THREADS: "1"
+    secrets: [worker-token]
+    volumes: [model-cache:/cache]
+    networks: [clip-net]
+    healthcheck:
+      test: [CMD-SHELL, test -f /tmp/worker-ready]
+      interval: 20s
+      timeout: 5s
+      start_period: 5m
+      retries: 3
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+    deploy:
+      resources:
+        limits: {memory: 2g, cpus: "1"}
 networks:
   clip-net:
     name: clip-net
+  caddy-transcriber-net:
+    external: true
+volumes:
+  queue-data:
+  model-cache:
+secrets:
+  worker-credentials:
+    file: ${WORKER_CREDENTIALS_PATH:?Set worker credential registry}
+  worker-token:
+    file: ${WORKER_TOKEN_PATH:?Set server fallback token}

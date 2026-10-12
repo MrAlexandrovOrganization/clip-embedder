@@ -8,11 +8,13 @@ dependencies = [
     "grpcio-tools>=1.60",
     "grpcio-health-checking",
     "open_clip_torch",
-    "torch",
-    "torchvision",
     "pillow",
     "numpy",
 ]
+
+[project.optional-dependencies]
+cpu = ["torch==2.8.0", "torchvision==0.23.0"]
+cuda = ["torch==2.8.0", "torchvision==0.23.0"]
 
 [dependency-groups]
 dev = [
@@ -24,16 +26,24 @@ dev = [
 # Application, not a library: don't build/install ourselves into the venv.
 [tool.uv]
 package = false
+conflicts = [[{extra = "cpu"}, {extra = "cuda"}]]
 
-# Build a CPU-only torch wheel to keep the image small. For GPU, drop the
-# [tool.uv.sources]/[[tool.uv.index]] blocks below (then torch pulls CUDA).
 [tool.uv.sources]
-torch = [{ index = "pytorch-cpu" }]
-torchvision = [{ index = "pytorch-cpu" }]
-
+torch = [
+ {index = "pytorch-cpu", extra = "cpu", marker = "sys_platform == 'linux'"},
+ {index = "pytorch-cuda", extra = "cuda", marker = "sys_platform == 'linux'"},
+]
+torchvision = [
+ {index = "pytorch-cpu", extra = "cpu", marker = "sys_platform == 'linux'"},
+ {index = "pytorch-cuda", extra = "cuda", marker = "sys_platform == 'linux'"},
+]
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+[[tool.uv.index]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
 [tool.ruff]
