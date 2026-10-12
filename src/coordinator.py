@@ -141,4 +141,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        # Startup errors may carry signed download URLs or transport details.
+        LOG.error("startup failed; check configuration, model cache and device availability")
+        raise SystemExit(1) from None
