@@ -10,3 +10,5 @@ CREATE TABLE IF NOT EXISTS workers (
  model TEXT NOT NULL, pretrained TEXT NOT NULL, reported REAL NOT NULL,
  PRIMARY KEY(worker,instance)
 );
+
+CREATE TABLE IF NOT EXISTS schema_migrations(version TEXT PRIMARY KEY);

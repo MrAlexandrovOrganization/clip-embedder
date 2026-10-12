@@ -31,6 +31,21 @@ class Store:
             initial.execute("PRAGMA journal_mode=WAL")
         with self.db() as db:
             db.executescript(Path(__file__).with_name("schema.sql").read_text())
+        # Ordered additive migrations share the queue's writer lock. Execute
+        # complete statements individually: executescript would commit the lock.
+        with self.db() as db:
+            for migration in sorted(Path(__file__).with_name("migrations").glob("*.sql")):
+                if db.execute(sql("migration_applied"), (migration.name,)).fetchone():
+                    continue
+                statement = ""
+                for line in migration.read_text().splitlines(keepends=True):
+                    statement += line
+                    if sqlite3.complete_statement(statement):
+                        db.execute(statement)
+                        statement = ""
+                if statement.strip():
+                    raise ValueError("incomplete queue migration")
+                db.execute(sql("migration_record"), (migration.name,))
 
     @contextmanager
     def db(self):

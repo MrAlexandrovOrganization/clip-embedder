@@ -54,6 +54,10 @@ class WorkerCredentials:
             # Never include paths, registry contents or JSON decoder excerpts.
             raise ValueError("Invalid worker credential registry") from None
 
+    @property
+    def worker_ids(self):
+        return frozenset(self._hashes)
+
     def authenticate(self, authorization):
         if not isinstance(authorization, str) or not authorization.startswith("Bearer "):
             return None

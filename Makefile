@@ -64,6 +64,9 @@ else
 endif
 up-selected:
 	$(DOCKER_COMPOSE) up -d --build
+ifeq ($(STACK_ROLE),server)
+	$(MAKE) monitoring-install
+endif
 
 .PHONY: down
 down:
@@ -127,3 +130,11 @@ publish-workers:
 	python3 scripts/worker_release.py publish --arch $(PUBLISH_ARCH)
 promote-workers:
 	python3 scripts/worker_release.py promote
+
+.PHONY: monitoring-check monitoring-install
+monitoring-install:
+	@test '$(STACK_ROLE)' = server
+	python3 scripts/install_monitoring.py
+monitoring-check:
+	python3 -c 'import json; from pathlib import Path; doc=json.loads(Path("monitoring/prometheus/clip-embedder.yml").read_text()); assert doc == [{"targets":["clip-metrics:9110"],"labels":{"service":"clip-embedder"}}]'
+check: monitoring-check

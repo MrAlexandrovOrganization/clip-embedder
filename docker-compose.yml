@@ -11,6 +11,7 @@ services:
     restart: unless-stopped
     command: [python, src/coordinator.py]
     environment:
+      METRICS_HOST: clip-metrics
       CLIP_MODEL: ${CLIP_MODEL:-ViT-B/32}
       CLIP_PRETRAIN: ${CLIP_PRETRAIN:-laion2b_s34b_b79k}
       QUEUE_PATH: /data/queue.sqlite3
@@ -18,7 +19,11 @@ services:
       PREFERRED_WORKER_IDS: ${PREFERRED_WORKER_IDS:-clip-mac-cpu,clip-wsl-cpu,clip-wsl-gpu}
     secrets: [worker-credentials]
     volumes: [queue-data:/data]
-    networks: [clip-net, caddy-transcriber-net]
+    networks:
+      clip-net: {}
+      caddy-transcriber-net: {}
+      prometheus-net:
+        aliases: [clip-metrics]
     stop_grace_period: 30s
     healthcheck:
       test: [CMD, python, -c, "import grpc; from grpc_health.v1 import health_pb2,health_pb2_grpc; c=grpc.insecure_channel('localhost:50051'); assert health_pb2_grpc.HealthStub(c).Check(health_pb2.HealthCheckRequest(service='embed.EmbedderService'),timeout=3).status==1"]
@@ -62,6 +67,8 @@ services:
       resources:
         limits: {memory: 2g, cpus: "1"}
 networks:
+  prometheus-net:
+    external: true
   clip-net:
     name: clip-net
   caddy-transcriber-net:

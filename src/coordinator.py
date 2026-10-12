@@ -16,6 +16,7 @@ import embed_pb2 as pb
 import embed_pb2_grpc as rpc
 from auth import WorkerCredentials
 from logging_setup import setup
+from metrics import serve as serve_metrics
 from store import QueueFull, Store
 
 LOG = logging.getLogger("clip-coordinator")
@@ -129,6 +130,7 @@ def main():
     rpc.add_WorkerServiceServicer_to_server(Workers(store, credentials), workers)
     if not workers.add_insecure_port(os.getenv("WORKER_ADDR", "[::]:50057")):
         raise RuntimeError("worker listener bind failed")
+    metrics = serve_metrics(store, credentials.worker_ids)
     stop = threading.Event()
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: stop.set())
@@ -138,6 +140,8 @@ def main():
     stop.wait()
     internal.stop(10).wait()
     workers.stop(10).wait()
+    metrics.shutdown()
+    metrics.server_close()
 
 
 if __name__ == "__main__":

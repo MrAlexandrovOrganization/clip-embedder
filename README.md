@@ -79,3 +79,35 @@ GPU workers default to mixed FP16 weights to fit alongside Whisper on the MX550;
 CPU uses FP32. GPU_PRECISION/CPU_PRECISION select the supported modes in .env.
 Output normalization runs in FP32. The model/checkpoint/512-dimensional space is
 identical; vectors are not guaranteed bitwise identical across precisions.
+
+## Monitoring
+
+The private Prometheus endpoint binds only its prometheus-net alias, with no
+published host port or Caddy route. Scrape failures return HTTP 503; stale values
+are never emitted as a successful scrape. The coordinator snapshots queue state
+and the latest compatible readiness reports, with explicit zero series for all
+credential-registry worker IDs. Metrics contain no media, text, task IDs, token
+values or instance UUID labels. Readiness has the same 90-second TTL as claiming.
+
+Completion, failure, retry and lease-expiration counters are stored transactionally
+with queue state and survive process restarts and terminal-job cleanup. Their
+history starts at this rollout; old results are not retroactively counted.
+P50/P95 duration gauges use successful jobs completed in the last 24 hours,
+measured from coordinator lease acquisition and enqueue time respectively.
+They include transport/model-loading time and are not device benchmarks.
+Legacy results without recorded timestamps do not contribute to durations.
+
+Startup runs the additive monitoring migration under the existing database lock;
+source items and queue payload/results are preserved. This is an explicit
+continuation of this project's startup-migration policy. Backups must include
+queue metadata and counters as well as stored results.
+
+`make monitoring-install` installs only this project's files into
+MONITORING_DATA_DIR (default ~/.monitoring). Server `make up` calls it automatically;
+worker stacks never change shared monitoring files. The existing Prometheus
+file discovery and Grafana file provisioning pick up changes without restarts.
+
+The shared dashboard is owned by Stash at /d/compute-workers and uses this
+service's compute_* metrics with service="clip-embedder". The SQLite migration
+ledger is separate from queue schema initialization and applied under one
+writer transaction; the metrics reader uses a read-only WAL snapshot.
