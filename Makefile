@@ -82,8 +82,7 @@ logs:
 	$(DOCKER_COMPOSE) logs -f
 
 .PHONY: deploy
-deploy:
-	$(DOCKER_COMPOSE) up -d --build --no-cache $(SERVICE)
+deploy: up
 
 .PHONY: restart
 restart:
