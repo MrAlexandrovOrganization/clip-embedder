@@ -10,3 +10,5 @@ src/embed_pb2.pyi
 .env*
 !.env.*.example
 .worker-release*
+
+.server-release*

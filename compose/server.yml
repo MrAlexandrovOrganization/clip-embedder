@@ -7,6 +7,7 @@ x-build: &build
 services:
   clip-embedder:
     user: ${WORKER_UID:-1000}:${WORKER_GID:-1000}
+    image: ${SERVER_IMAGE:-clip-embedder:local}
     build: *build
     restart: unless-stopped
     command: [python, src/coordinator.py]
@@ -38,6 +39,7 @@ services:
         limits: {memory: 768m, cpus: "0.5"}
   worker-cpu:
     user: ${WORKER_UID:-1000}:${WORKER_GID:-1000}
+    image: ${SERVER_IMAGE:-clip-embedder:local}
     build: *build
     command: [python, src/worker.py]
     restart: unless-stopped

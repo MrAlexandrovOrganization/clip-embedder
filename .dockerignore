@@ -9,9 +9,13 @@ __pycache__
 .python-version
 .env
 .env.*
-docker-compose.yml
-docker-compose.base.yml
+compose
+Makefiles
 Makefile
 src/embed_pb2.py
 src/embed_pb2_grpc.py
 src/embed_pb2.pyi
+
+.worker-release*
+
+.server-release*

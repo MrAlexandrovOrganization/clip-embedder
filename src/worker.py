@@ -17,6 +17,7 @@ from PIL import Image, UnidentifiedImageError
 import embed_pb2 as pb
 import embed_pb2_grpc as rpc
 from logging_setup import setup
+from transport import worker_channel
 
 LOG = logging.getLogger("clip-worker")
 
@@ -47,12 +48,7 @@ def main():
         ("grpc.max_receive_message_length", 16 * 1024 * 1024),
         ("grpc.max_send_message_length", 16 * 1024 * 1024),
     ]
-    if os.getenv("WORKER_TRANSPORT", "tls") == "tls":
-        channel = grpc.secure_channel(endpoint, grpc.ssl_channel_credentials(), options=options)
-    elif endpoint == "clip-embedder:50057":
-        channel = grpc.insecure_channel(endpoint, options=options)
-    else:
-        raise ValueError("plaintext allowed only inside server compose network")
+    channel = worker_channel(endpoint, os.getenv("WORKER_TRANSPORT", "tls"), options)
     stub = rpc.WorkerServiceStub(channel)
     metadata = (("authorization", "Bearer " + token),)
     stop = threading.Event()

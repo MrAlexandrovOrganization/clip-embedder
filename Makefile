@@ -1,6 +1,7 @@
 DOCKER_COMPOSE = docker compose
-include versions.mk
+include Makefiles/versions.mk
 -include .worker-release.env
+-include .server-release.env
 export WORKER_CPU_IMAGE WORKER_GPU_IMAGE
 ENV_FILE ?= .env
 STACK_ROLE ?= server
@@ -9,15 +10,15 @@ include $(ENV_FILE)
 export
 endif
 ifeq ($(STACK_ROLE),workers)
-COMPOSE_FILE := compose.workers.yml
+COMPOSE_FILE := compose/workers.yml
 ifeq ($(WORKER_AUTODEPLOY),1)
-COMPOSE_FILE := compose.workers.yml:compose.autoupdate.yml
+COMPOSE_FILE := compose/workers.yml:compose/workers.autodeploy.yml
 endif
 else
-COMPOSE_FILE := docker-compose.yml
+COMPOSE_FILE := compose/server.yml
 endif
-export COMPOSE_FILE
-DOCKER_COMPOSE += --env-file $(ENV_FILE)
+export COMPOSE_FILE STACK_ROLE WORKER_AUTODEPLOY COMPOSE_PROFILES
+DOCKER_COMPOSE += --project-directory "$(CURDIR)" --env-file $(ENV_FILE)
 
 SERVICE = clip-embedder
 
@@ -26,9 +27,13 @@ install:
 	uv sync --locked --dev --extra cpu
 
 # Install the pre-commit git hook (requires `make install` first).
-.PHONY: hooks
-hooks:
+.PHONY: install-hooks hooks
+install-hooks:
+	@test -z "$$(git config --get core.hooksPath)" || { echo "core.hooksPath is already configured" >&2; exit 1; }
+	@test ! -e "$$(git rev-parse --git-path hooks/pre-commit)" && test ! -L "$$(git rev-parse --git-path hooks/pre-commit)" && test ! -e "$$(git rev-parse --git-path hooks/pre-commit).legacy" && test ! -L "$$(git rev-parse --git-path hooks/pre-commit).legacy" || { echo "pre-commit hook already exists" >&2; exit 1; }
 	uv run --locked --extra cpu pre-commit install
+
+hooks: install-hooks
 
 # Run all pre-commit hooks over the whole tree.
 .PHONY: precommit
@@ -48,7 +53,7 @@ proto:
 
 .PHONY: run
 run: proto
-	uv run --locked --extra cpu python src/server.py
+	uv run --locked --extra cpu python src/coordinator.py
 
 .PHONY: build
 build:
@@ -62,7 +67,7 @@ ifeq ($(STACK_ROLE):$(WORKER_AUTODEPLOY),workers:1)
 else
 	$(MAKE) up-selected
 endif
-up-selected:
+up-selected: config-check
 	$(DOCKER_COMPOSE) up -d --build
 ifeq ($(STACK_ROLE),server)
 	$(MAKE) monitoring-install
@@ -84,22 +89,14 @@ deploy:
 restart:
 	$(DOCKER_COMPOSE) restart
 
-# Check formatting (fails if not formatted); `make fmt` to apply.
 .PHONY: format
 format:
-	uv run --locked --extra cpu ruff check --fix --no-unsafe-fixes .
-	uv run --locked --extra cpu ruff format .
-
-.PHONY: fmt
-fmt: format
-
-.PHONY: lint
-lint:
-	uv run --locked --extra cpu ruff check .
+	uv run --locked --extra cpu ruff check --fix --no-unsafe-fixes --force-exclude .
+	uv run --locked --extra cpu ruff format --force-exclude .
 
 .PHONY: test
 test: proto
-	uv run --locked --extra cpu python -c "import sys; sys.path.insert(0, 'src'); import embed_pb2, embed_pb2_grpc; print('proto stubs ok')"
+	uv run --locked --extra cpu python -m unittest discover -s tests -v
 
 .PHONY: clean
 clean:
@@ -108,11 +105,11 @@ clean:
 	rm -f src/embed_pb2.py src/embed_pb2_grpc.py src/embed_pb2.pyi
 
 .PHONY: check config-check ps versions compose-build
-check: proto
-	uv run --locked --extra cpu ruff check .
-	uv run --locked --extra cpu ruff format --check .
+check: test
+	uv run --locked --extra cpu ruff check --force-exclude .
+	uv run --locked --extra cpu ruff format --check --force-exclude .
 config-check:
-	$(DOCKER_COMPOSE) config --quiet
+	python3 scripts/check_config.py $(DOCKER_COMPOSE)
 ps:
 	$(DOCKER_COMPOSE) ps -a
 versions:
@@ -138,3 +135,22 @@ monitoring-install:
 monitoring-check:
 	python3 -c 'import json; from pathlib import Path; doc=json.loads(Path("monitoring/prometheus/clip-embedder.yml").read_text()); assert doc == [{"targets":["clip-metrics:9110"],"labels":{"service":"clip-embedder"}}]'
 check: monitoring-check
+
+.PHONY: config-check-examples
+config-check-examples:
+	$(MAKE) ENV_FILE=.env.server.example config-check
+	$(MAKE) ENV_FILE=.env.mac.example config-check
+	$(MAKE) ENV_FILE=.env.wsl.example config-check
+
+check: config-check-examples
+
+# CI deploys the already built amd64 artifact by immutable digest.
+.PHONY: server-image deploy-image
+server-image:
+	python3 scripts/server_image.py
+deploy-image: config-check
+	@python3 -c 'import os,re; assert re.fullmatch(re.escape(os.environ["WORKER_REGISTRY"]+"-worker-cpu")+r"@sha256:[a-f0-9]{64}",os.environ.get("SERVER_IMAGE","")), "SERVER_IMAGE must be the published immutable digest"'
+	$(DOCKER_COMPOSE) up -d --no-build --pull always --wait --wait-timeout 300
+	$(MAKE) monitoring-install
+	python3 scripts/server_image.py record
+export SERVER_IMAGE
