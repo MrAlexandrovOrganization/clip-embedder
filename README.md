@@ -153,3 +153,10 @@ Keep the pre-migration container images until the first successful rollout.
 CI actions use the Node.js 24 runtime. This concerns the actions themselves,
 not the application's Go/Python runtime. GitHub-hosted runners supply it;
 self-hosted runners must meet the selected actions' minimum runner version.
+
+## Container names
+
+Compose uses explicit service names without replica numbers. Set
+`CONTAINER_NAME_PREFIX` (for example `dev-`) for an additional local or CI stack
+on the same Docker host. Keep Compose project/service labels and volume names
+unchanged; clients address services or explicit network aliases.

@@ -6,6 +6,7 @@ x-build: &build
     UV_VERSION: ${UV_VERSION:?Run via make}
 services:
   clip-embedder:
+    container_name: "${CONTAINER_NAME_PREFIX:-}clip-embedder"
     user: ${WORKER_UID:-1000}:${WORKER_GID:-1000}
     image: ${SERVER_IMAGE:-clip-embedder:local}
     build: *build
@@ -38,6 +39,7 @@ services:
       resources:
         limits: {memory: 768m, cpus: "0.5"}
   worker-cpu:
+    container_name: "${CONTAINER_NAME_PREFIX:-}clip-embedder-worker-cpu"
     user: ${WORKER_UID:-1000}:${WORKER_GID:-1000}
     image: ${SERVER_IMAGE:-clip-embedder:local}
     build: *build

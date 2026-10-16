@@ -24,6 +24,7 @@ x-env: &env
   CPU_THREADS: ${CPU_THREADS:-2}
 services:
   worker-cpu:
+    container_name: "${CONTAINER_NAME_PREFIX:-}clip-embedder-worker-cpu"
     <<: *worker
     profiles: [cpu]
     image: ${WORKER_CPU_IMAGE:-ghcr.io/mralexandrovorganization/clip-embedder-worker-cpu:bootstrap}
@@ -38,6 +39,7 @@ services:
     mem_limit: ${CPU_MEMORY_LIMIT:-2g}
     cpus: ${CPU_LIMIT:-2}
   worker-gpu:
+    container_name: "${CONTAINER_NAME_PREFIX:-}clip-embedder-worker-gpu"
     <<: *worker
     profiles: [gpu]
     image: ${WORKER_GPU_IMAGE:-ghcr.io/mralexandrovorganization/clip-embedder-worker-gpu:bootstrap}
