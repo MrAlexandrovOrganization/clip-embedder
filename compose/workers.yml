@@ -1,6 +1,6 @@
 x-worker: &worker
   user: ${WORKER_UID:-1000}:${WORKER_GID:-1000}
-  restart: unless-stopped
+  restart: always
   command: [python, src/worker.py]
   stop_grace_period: 45s
   security_opt: [no-new-privileges:true]

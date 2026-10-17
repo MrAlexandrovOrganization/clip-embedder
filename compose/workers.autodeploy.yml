@@ -18,7 +18,7 @@ services:
       dockerfile: updater/Dockerfile
       args:
         PYTHON_VERSION: ${PYTHON_VERSION:?Run via make}
-    restart: unless-stopped
+    restart: always
     environment:
       WORKER_PROJECT: ${COMPOSE_PROJECT_NAME:?Set compose project name}
       WORKER_REGISTRY: ghcr.io/mralexandrovorganization/clip-embedder

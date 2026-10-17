@@ -46,6 +46,10 @@ no SSH tunnels or public inbound ports on Mac/WSL are needed.
 
 ## Running
 
+Workers and their updater use `restart: always` so existing containers start
+when Docker (including Colima) starts, even after a manual stop. `make down`
+removes the containers and disables this automatic startup until `make up`.
+
 Copy the matching .env.server.example, .env.mac.example or .env.wsl.example to
 .env and fill machine paths/endpoint. The same make up/down/logs/restart/ps
 commands select the server or worker Compose stack. .env sets models, IDs,
