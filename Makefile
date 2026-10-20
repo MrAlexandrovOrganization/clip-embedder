@@ -159,3 +159,8 @@ deploy-image: config-check
 	$(MAKE) monitoring-install
 	python3 scripts/server_image.py record
 export SERVER_IMAGE
+
+.PHONY: compose
+ARGS ?= ps
+compose:
+	$(DOCKER_COMPOSE) $(ARGS)
