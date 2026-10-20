@@ -1,0 +1,4 @@
+services:
+  clip-embedder:
+    ports:
+      - "${TAILNET_BIND_IP:?Set this host's tailnet IP}:50051:50051"

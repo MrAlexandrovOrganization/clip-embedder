@@ -1,5 +1,5 @@
 DOCKER_COMPOSE = docker compose
-include Makefiles/versions.mk
+include makefiles/versions.mk
 -include .worker-release.env
 -include .server-release.env
 export WORKER_CPU_IMAGE WORKER_GPU_IMAGE
@@ -14,8 +14,12 @@ COMPOSE_FILE := compose/workers.yml
 ifeq ($(WORKER_AUTODEPLOY),1)
 COMPOSE_FILE := compose/workers.yml:compose/workers.autodeploy.yml
 endif
+else ifeq ($(STACK_ROLE),server)
+COMPOSE_FILE := compose/server.yml$(if $(SERVER_COMPOSE_OVERLAY),:$(SERVER_COMPOSE_OVERLAY))
+else ifeq ($(STACK_ROLE),forwarder)
+COMPOSE_FILE := compose/forwarder.yml
 else
-COMPOSE_FILE := compose/server.yml
+$(error Unsupported STACK_ROLE; this checkout may be retired after migration)
 endif
 export COMPOSE_FILE STACK_ROLE WORKER_AUTODEPLOY COMPOSE_PROFILES
 DOCKER_COMPOSE += --project-directory "$(CURDIR)" --env-file $(ENV_FILE)
@@ -140,6 +144,8 @@ config-check-examples:
 	$(MAKE) ENV_FILE=.env.server.example config-check
 	$(MAKE) ENV_FILE=.env.mac.example config-check
 	$(MAKE) ENV_FILE=.env.wsl.example config-check
+	$(MAKE) ENV_FILE=.env.russia.example config-check
+	$(MAKE) ENV_FILE=.env.forwarder.example config-check
 
 check: config-check-examples
 

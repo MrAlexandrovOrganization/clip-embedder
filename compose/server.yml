@@ -38,38 +38,7 @@ services:
     deploy:
       resources:
         limits: {memory: 768m, cpus: "0.5"}
-  worker-cpu:
-    container_name: "${CONTAINER_NAME_PREFIX:-}clip-embedder-worker-cpu"
-    user: ${WORKER_UID:-1000}:${WORKER_GID:-1000}
-    image: ${SERVER_IMAGE:-clip-embedder:local}
-    build: *build
-    command: [python, src/worker.py]
-    restart: unless-stopped
-    stop_grace_period: 45s
-    environment:
-      WORKER_ID: clip-server-fallback
-      WORKER_ENDPOINT: clip-embedder:50057
-      WORKER_TRANSPORT: internal
-      WORKER_TOKEN_FILE: /run/secrets/worker-token
-      CLIP_MODEL: ${CLIP_MODEL:-ViT-B/32}
-      CLIP_PRETRAIN: ${CLIP_PRETRAIN:-laion2b_s34b_b79k}
-      DEVICE: cpu
-      CPU_THREADS: "1"
-    secrets: [worker-token]
-    volumes: [model-cache:/cache]
-    networks: [clip-net]
-    healthcheck:
-      test: [CMD-SHELL, test -f /tmp/worker-ready]
-      interval: 20s
-      timeout: 5s
-      start_period: 5m
-      retries: 3
-    logging:
-      driver: json-file
-      options: {max-size: 10m, max-file: "3"}
-    deploy:
-      resources:
-        limits: {memory: 2g, cpus: "1"}
+
 networks:
   prometheus-net:
     external: true
@@ -79,9 +48,6 @@ networks:
     external: true
 volumes:
   queue-data:
-  model-cache:
 secrets:
   worker-credentials:
     file: ${WORKER_CREDENTIALS_PATH:?Set worker credential registry}
-  worker-token:
-    file: ${WORKER_TOKEN_PATH:?Set server fallback token}

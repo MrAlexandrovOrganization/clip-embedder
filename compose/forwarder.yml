@@ -1,0 +1,18 @@
+services:
+  clip-embedder:
+    container_name: "${CONTAINER_NAME_PREFIX:-}clip-embedder-forwarder"
+    image: caddy:${CADDY_VERSION:?Run via make}
+    restart: unless-stopped
+    environment:
+      CLIP_UPSTREAM: ${CLIP_UPSTREAM:?Set destination tailnet host and port}
+    volumes:
+      - ./compose/Forwarderfile:/etc/caddy/Caddyfile:ro
+    networks: [clip-net]
+    mem_limit: 64m
+    cpus: 0.25
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+networks:
+  clip-net:
+    name: clip-net

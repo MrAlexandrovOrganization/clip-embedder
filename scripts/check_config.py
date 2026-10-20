@@ -1,5 +1,6 @@
 """Validate resolved Compose configuration without printing secret-bearing values."""
 
+import ipaddress
 import json
 import os
 import subprocess
@@ -8,8 +9,8 @@ import sys
 
 def validate(config, role, profiles):
     services = config["services"]
-    if role not in ("server", "workers"):
-        raise ValueError("STACK_ROLE must be server or workers")
+    if role not in ("server", "workers", "forwarder"):
+        raise ValueError("STACK_ROLE must be server, workers or forwarder")
     tokens, identities = set(), set()
     if role == "workers":
         if "stash" in services or "clip-embedder" in services:
@@ -53,18 +54,24 @@ def validate(config, role, profiles):
                 "reservations", {}
             ).get("devices"):
                 raise ValueError("GPU worker needs a GPU device reservation")
-    else:
+    elif role == "server":
         coordinator = "stash" if "stash" in services else "clip-embedder"
-        expected = "stash:50058" if coordinator == "stash" else "clip-embedder:50057"
-        fallback = services["stash-worker" if coordinator == "stash" else "worker-cpu"]
-        env = fallback["environment"]
-        if env.get("WORKER_TRANSPORT") != "internal" or env.get("WORKER_ENDPOINT") != expected:
-            raise ValueError("plaintext fallback must use its private Compose endpoint")
+        if any("worker" in name for name in services):
+            raise ValueError("coordinator stack must not include inference workers")
         if not services[coordinator].get("secrets"):
             raise ValueError("coordinator requires scoped credentials")
+    else:
+        if set(services) != {"clip-embedder"} or services["clip-embedder"].get("build"):
+            raise ValueError("forwarder must contain only the proxy image")
     for spec in services.values():
-        if spec.get("ports"):
-            raise ValueError("these stacks use private networks; published ports are unsupported")
+        for port in spec.get("ports", []):
+            address = port.get("host_ip", "")
+            if (
+                role != "server"
+                or not address
+                or ipaddress.ip_address(address) not in ipaddress.ip_network("100.64.0.0/10")
+            ):
+                raise ValueError("published endpoints must bind to the server's tailnet address")
 
 
 def main():
