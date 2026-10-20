@@ -15,3 +15,12 @@ back, restore its credential registry, then reactivate the old source configurat
 Never run two coordinators on divergent copies of the queue. Runtime settings
 and private backups are outside Git, under ~/.local/state/server-migration-20261020
 on the administrative Mac, with copies on the destination hosts.
+
+## Verified on 21 October 2026
+
+The final SQLite volume passed integrity_check; its SHA-256 matched before
+coordinator startup. The legacy Docker alias on server forwarded a synthetic text
+task to Russia, a remote worker returned 512 dimensions with the unchanged model
+identity, and replay returned the same vector. Source coordinator/fallback are
+stopped with restart=no. The source forwarder accepts h2c and performs no inference.
+DEPLOY_ENABLED=true and repository VM_* secrets now select Russia.
