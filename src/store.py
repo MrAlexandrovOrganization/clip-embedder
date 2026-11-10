@@ -48,13 +48,19 @@ class Store:
                 db.execute(sql("migration_record"), (migration.name,))
 
     @contextmanager
-    def db(self):
-        db = sqlite3.connect(self.path, timeout=5, isolation_level=None)
+    def db(self, *, write=True):
+        # WAL readers must not compete for the single writer lock. URI read-only
+        # mode also prevents an accidental status read from creating a new DB.
+        target = self.path if write else Path(self.path).resolve().as_uri() + "?mode=ro"
+        db = sqlite3.connect(target, timeout=5, isolation_level=None, uri=not write)
         db.row_factory = sqlite3.Row
         try:
             db.execute("PRAGMA foreign_keys=ON")
-            db.execute("PRAGMA synchronous=FULL")
-            db.execute(sql("query_01"))
+            if write:
+                db.execute("PRAGMA synchronous=FULL")
+                db.execute(sql("query_01"))
+            else:
+                db.execute("PRAGMA query_only=ON")
             yield db
             db.commit()
         except BaseException:
@@ -83,7 +89,7 @@ class Store:
         return key
 
     def get(self, key):
-        with self.db() as db:
+        with self.db(write=False) as db:
             return db.execute(sql("query_11"), (key,)).fetchone()
 
     def report(self, worker, instance, ready, model, pretrained):

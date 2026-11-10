@@ -167,3 +167,22 @@ unchanged; clients address services or explicit network aliases.
 ## Migration from server
 
 See [MIGRATION.md](MIGRATION.md) for the placement, data verification and rollback.
+
+## Queue contention and log recovery
+
+Status polling uses a read-only SQLite connection in WAL mode and does not take
+`BEGIN IMMEDIATE`. Queue mutations retain their existing writer transaction and
+FULL synchronous policy. A busy/locked database returns retryable gRPC
+UNAVAILABLE, with the operation and numeric SQLite code in a warning. Other
+SQLite failures return INTERNAL and remain errors, without disclosing database
+paths or request payloads. Existing workers back off on RPC failures; consumers
+can retry the same input without creating a second logical job. No queue or
+model fallback on Russia is enabled by this change.
+
+Metrics clients disconnecting during a scrape generate a debug event instead
+of socketserver's multiline stderr traceback. Snapshot failures still return
+503; unexpected handler failures produce an error with the exception type.
+`make check` verifies read-side progress during a held writer transaction,
+committed-state visibility, read-only enforcement, retryable/nonretryable RPC
+mapping and disconnected HTTP responses with synthetic data only. These tests
+do not prove that every possible runtime writer contention has disappeared.

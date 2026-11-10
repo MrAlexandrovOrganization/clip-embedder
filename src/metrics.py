@@ -1,13 +1,17 @@
 """Private Prometheus snapshot; no media, text, task IDs or bearer credentials."""
 
 import json
+import logging
 import os
 import sqlite3
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from store import sql
+
+LOG = logging.getLogger("clip-metrics")
 
 COUNTERS = {
     "completed": "compute_jobs_completed_total",
@@ -137,6 +141,12 @@ def serve(store, identities):
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
             self.connection.settimeout(10)
+            try:
+                self.respond()
+            except (BrokenPipeError, ConnectionResetError, TimeoutError):
+                LOG.debug("metrics client disconnected")
+
+        def respond(self):
             if self.path != "/metrics":
                 self.send_error(404)
                 return
@@ -160,7 +170,12 @@ def serve(store, identities):
         def log_message(self, *_):
             pass
 
-    server = ThreadingHTTPServer((host, port), Handler)
+    class Server(ThreadingHTTPServer):
+        def handle_error(self, request, client_address):
+            # socketserver's default prints a multiline traceback to stderr.
+            LOG.error("metrics handler failed: error_type=%s", type(sys.exception()).__name__)
+
+    server = Server((host, port), Handler)
     server.daemon_threads = True
     threading.Thread(target=server.serve_forever, daemon=True, name="metrics").start()
     return server

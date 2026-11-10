@@ -23,6 +23,26 @@ LOG = logging.getLogger("clip-coordinator")
 LIMIT = 16 * 1024 * 1024
 
 
+def queue_call(context, operation, callback, *args):
+    """Expose a retryable transport failure without DB paths or payloads."""
+    try:
+        return callback(*args)
+    except sqlite3.Error as exc:
+        code = getattr(exc, "sqlite_errorcode", 0) & 0xFF
+        busy = code in {sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED}
+        log = LOG.warning if busy else LOG.error
+        log(
+            "queue operation failed: operation=%s sqlite_code=%s retryable=%s",
+            operation,
+            code,
+            busy,
+        )
+        context.abort(
+            grpc.StatusCode.UNAVAILABLE if busy else grpc.StatusCode.INTERNAL,
+            "queue busy; retry the same request" if busy else "queue unavailable",
+        )
+
+
 class Embedder(rpc.EmbedderServiceServicer):
     def __init__(self, store):
         self.store = store
@@ -35,15 +55,13 @@ class Embedder(rpc.EmbedderServiceServicer):
         ):
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, "invalid input size")
         try:
-            job = self.store.submit(kind, payload)
+            job = queue_call(context, "submit", self.store.submit, kind, payload)
         except QueueFull:
             context.abort(grpc.StatusCode.RESOURCE_EXHAUSTED, "embedding queue full")
-        except sqlite3.Error:
-            context.abort(grpc.StatusCode.UNAVAILABLE, "queue unavailable")
         # The job survives RPC cancellation. Replays address the same model/input hash.
         deadline = time.monotonic() + min(context.time_remaining() or 120, 120)
         while context.is_active() and time.monotonic() < deadline:
-            row = self.store.get(job)
+            row = queue_call(context, "status", self.store.get, job)
             if row["status"] == "done":
                 return pb.EmbedResponse.FromString(row["result"])
             if row["status"] == "failed":
@@ -74,19 +92,31 @@ class Workers(rpc.WorkerServiceServicer):
 
     def Report(self, request, context):
         self.authorize(request, context)
-        self.store.report(
-            request.worker_id, request.instance_id, request.ready, request.model, request.pretrained
+        queue_call(
+            context,
+            "report",
+            self.store.report,
+            request.worker_id,
+            request.instance_id,
+            request.ready,
+            request.model,
+            request.pretrained,
         )
         return pb.WorkerReply(accepted=True)
 
     def Claim(self, request, context):
         self.authorize(request, context)
-        return self.store.claim(request.worker_id, request.instance_id) or pb.ClaimResponse()
+        return (
+            queue_call(context, "claim", self.store.claim, request.worker_id, request.instance_id)
+            or pb.ClaimResponse()
+        )
 
     def update(self, request, context, action, result=None, permanent=False):
         self.authorize(request, context)
         try:
-            accepted = self.store.finish(request, action, result, permanent)
+            accepted = queue_call(
+                context, action, self.store.finish, request, action, result, permanent
+            )
         except ValueError:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, "incompatible result")
         return pb.WorkerReply(accepted=accepted)
