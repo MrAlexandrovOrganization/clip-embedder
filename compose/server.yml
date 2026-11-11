@@ -1,6 +1,7 @@
 x-build: &build
   context: .
   dockerfile: src/Dockerfile
+  target: coordinator
   args:
     PYTHON_VERSION: ${PYTHON_VERSION:?Run via make}
     UV_VERSION: ${UV_VERSION:?Run via make}

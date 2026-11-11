@@ -64,7 +64,7 @@ weights download to the named model-cache volume on the first worker startup.
 CI uses Make to check, build and publish immutable CPU (amd64/arm64) and CUDA (amd64)
 images to public GHCR packages. Only after the server deployment succeeds is the
 stable release marker promoted. The server consumes the already published amd64
-CPU artifact by immutable digest with `make deploy-image`; it does not rebuild
+coordinator artifact by immutable digest with `make deploy-image`; it does not rebuild
 application code. `make server-image` resolves that artifact for the exact SHA. WORKER_AUTODEPLOY=1 enables the container updater:
 it downloads the approved digest, drains a busy worker, starts the replacement,
 waits for Docker health, and rolls back on startup failure. Offline devices catch
@@ -205,3 +205,15 @@ CI публикует его как artifact. Экспорт содержит я
 пакетов задаются закрытой конфигурацией доставки. Сборщик строит итоговый файл
 из закреплённых экспортов; обычная сборка этого проекта не зависит от них.
 Копия Python-инструмента закреплена SHA-256 в `monitoring/tool.lock.json`.
+
+## Coordinator artifact
+
+The server role uses the `coordinator` Docker target and its own immutable
+artifact. It exports only the gRPC/Protobuf dependency closure from the existing
+`uv.lock`; the worker dependencies and lock remain unchanged. The coordinator
+image contains no Torch, OpenCLIP, NumPy or Pillow and cannot execute inference.
+CI builds it once, verifies imports in a read-only container with network
+disabled, and publishes that tested artifact. Worker publishing and approval
+remain separate. The dedicated `coordinator-sha-*` tag shares the existing
+image repository so deployed read access stays valid. Previous worker-CPU
+coordinator digests remain accepted for explicit rollback; normal deployment resolves the dedicated coordinator digest.

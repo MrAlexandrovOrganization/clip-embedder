@@ -166,3 +166,11 @@ compose:
 	$(DOCKER_COMPOSE) $(ARGS)
 
 include makefiles/observability.mk
+
+.PHONY: coordinator-build coordinator-smoke publish-coordinator
+coordinator-build:
+	python3 scripts/server_image.py build
+coordinator-smoke:
+	python3 scripts/server_image.py smoke
+publish-coordinator:
+	python3 scripts/server_image.py publish
