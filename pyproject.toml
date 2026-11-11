@@ -50,7 +50,7 @@ explicit = true
 line-length = 100
 target-version = "py312"
 # Generated gRPC stubs live in src/ and must not be linted.
-extend-exclude = ["src/embed_pb2.py", "src/embed_pb2_grpc.py", "src/embed_pb2.pyi"]
+extend-exclude = ["tools/observability", "src/embed_pb2.py", "src/embed_pb2_grpc.py", "src/embed_pb2.pyi"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]

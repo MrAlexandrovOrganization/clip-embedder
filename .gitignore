@@ -12,3 +12,5 @@ src/embed_pb2.pyi
 .worker-release*
 
 .server-release*
+
+.observability/

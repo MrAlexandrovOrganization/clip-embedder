@@ -164,3 +164,5 @@ export SERVER_IMAGE
 ARGS ?= ps
 compose:
 	$(DOCKER_COMPOSE) $(ARGS)
+
+include makefiles/observability.mk

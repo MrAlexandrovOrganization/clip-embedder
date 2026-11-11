@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "service": "clip-embedder",
+  "components": [
+    "clip-embedder/*",
+    "clip-workers/*"
+  ],
+  "logs": [],
+  "assets": [
+    {
+      "kind": "metrics",
+      "file": "monitoring/prometheus/clip-embedder.yml",
+      "destination": "clip-embedder.yml",
+      "location": "local"
+    }
+  ],
+  "retire": [
+    {
+      "kind": "metrics",
+      "destination": "clip-embedder.yml",
+      "sha256": [
+        "33353df9af6dff5504ef347d2164edeb7bbee74500e939dbcb9d16e32f45d5f0"
+      ],
+      "location": "central"
+    }
+  ]
+}
