@@ -9,9 +9,7 @@ from pathlib import Path
 
 
 def validate(registry, image):
-    if not re.fullmatch(
-        re.escape(registry + "-worker-cpu") + r"@sha256:[a-f0-9]{64}", image
-    ):
+    if not re.fullmatch(re.escape(registry + "-worker-cpu") + r"@sha256:[a-f0-9]{64}", image):
         raise ValueError("Invalid server image digest")
     return image
 
